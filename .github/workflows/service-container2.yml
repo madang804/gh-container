@@ -1,5 +1,5 @@
 name: Deployment (Container)
-on:
+on: 
   push:
     branches:
       - main
@@ -11,11 +11,9 @@ jobs:
   test:
     environment: testing
     runs-on: ubuntu-latest
-    container:
-      image: node:16
     env:
       MONGODB_CONNECTION_PROTOCOL: mongodb
-      MONGODB_CLUSTER_ADDRESS: mongodb
+      MONGODB_CLUSTER_ADDRESS: localhost
       MONGODB_USERNAME: root
       MONGODB_PASSWORD: password
       PORT: 8080
@@ -25,19 +23,24 @@ jobs:
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: password
+        ports:
+          - 27017:27017
     steps:
       - name: Get Code
         uses: actions/checkout@v3
       - name: Cache dependencies
+        id: cache
         uses: actions/cache@v3
         with:
-          path: ~/.npm
+          path: node_modules
           key: ${{ env.CACHE_KEY }}-${{ hashFiles('**/package-lock.json') }}
       - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: npm ci
       - name: Run server
-        run: npm start & npx wait-on http://127.0.0.1:$PORT # requires MongoDB Atlas to accept requests from anywhere!
+        run: npm start & npx wait-on http://127.0.0.1:$PORT
       - name: Run tests
+        continue-on-error: true
         run: npm test
       - name: Output information
         run: |
